@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { fetchPendingApprovalCount } from '../../pluginHost/api';
 import { fetchMyDaySummary, triggerMyDayRefresh, type MyDaySummary } from './client';
 
 const SECTIONS = [
@@ -37,7 +36,6 @@ function formatWindowRange(start: string, end: string): string {
 export function DayPage() {
   const [selectedDay, setSelectedDay] = useState<string>(todayIso());
   const [summary, setSummary] = useState<MyDaySummary | null>(null);
-  const [approvalsCount, setApprovalsCount] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
 
@@ -68,10 +66,6 @@ export function DayPage() {
       reloadSummary();
     }
   }
-
-  useEffect(() => {
-    fetchPendingApprovalCount().then(setApprovalsCount);
-  }, []);
 
   const atWindowStart = summary?.window ? selectedDay <= summary.window.start : false;
   const atWindowEnd = summary?.window ? selectedDay >= summary.window.end : false;
@@ -148,15 +142,6 @@ export function DayPage() {
             </Link>
           );
         })}
-        {/* Approvals are the framework's (agents asking a human); My Day only counts them. */}
-        <Link className="card day-section-card" to="/approvals">
-          <h2>Pending Approvals</h2>
-          {approvalsCount !== null && approvalsCount > 0 ? (
-            <div className="day-section-count">{approvalsCount}</div>
-          ) : (
-            <span className="text-muted">Nothing awaiting approval yet</span>
-          )}
-        </Link>
       </div>
     </>
   );

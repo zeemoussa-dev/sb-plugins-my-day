@@ -11,8 +11,7 @@ a manual refresh of the capture pipelines behind them.
 | `tests/` | the plugin's own tests; run on publish, never packaged |
 
 The plugin talks to the framework only through the Plugin API: `app.plugin_api`
-in the backend and `src/pluginHost/` in the screens. Pending approvals are a
-framework screen (`/approvals`); My Day only shows their count.
+in the backend and `src/pluginHost/` in the screens.
 
 ## Publish
 
