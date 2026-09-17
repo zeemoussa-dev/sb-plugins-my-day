@@ -4,7 +4,8 @@ Ported from the framework's `business/my_day.py` (Second Brain `REQ-SB-91`
 Phase 5) with its behaviour unchanged. The five framework capabilities it used
 directly are now the Plugin API v1 calls: `api.vault.index()`,
 `api.vault.notes_in_kind()`, `api.vault.read_note()`, `api.pipelines.get()` and
-`api.hermes.run_cron_job()`.
+`api.hermes.run_cron_job()`. Customers come from the Entities plugin's
+`entities.customers` service (1.3.0).
 """
 from __future__ import annotations
 
@@ -27,17 +28,6 @@ class DayOutsideWindowError(ValueError):
         self.window_start = window_start
         self.window_end = window_end
         super().__init__(f"day must be within the current window ({window_start} to {window_end})")
-
-
-def customer_from_tags(tags: list[str], lookup: dict[str, str]) -> str | None:
-    """THE Customer for a note, never a Partner. `lookup` holds both Customer
-    and Partner hub tags, so without the `customer/` filter a Thread tagged
-    `["partner/g42", "customer/mubadala"]` returned "G42" -- whichever tag came
-    first (found live 2026-08-27)."""
-    for tag in tags:
-        if tag.startswith("customer/") and tag in lookup:
-            return lookup[tag]
-    return None
 
 
 def _within_window(date_value: str, window_start: str, window_end: str) -> bool:
@@ -84,19 +74,15 @@ class DayView:
 
     # -- lookups built from the live index --------------------------------------------
 
-    def customer_name_by_tag(self) -> dict[str, str]:
-        """`customer/<slug>` -> the hub note's own `name`. Taken from the hub note
-        rather than reversing the slug, which gets names like "Al Ain" wrong."""
-        mapping: dict[str, str] = {}
-        for entry in self._api.vault.index().values():
-            if entry["frontmatter"].get("type") not in ("Customer", "Partner"):
-                continue
-            name = entry["frontmatter"].get("name")
-            if not name:
-                continue
-            for tag in entry["tags"]:
-                mapping.setdefault(tag, name)
-        return mapping
+    def _customer_resolver(self):
+        """`resolve(tags) -> customer name | None` for one listing. Customers
+        belong to the Entities plugin (Entities plan Phase 4): without it
+        installed, nothing on My Day has a customer, and nothing fails."""
+        customers = self._api.get_service("entities.customers")
+        if customers is None:
+            return lambda tags: None
+        lookup = customers.name_by_tag()
+        return lambda tags: customers.customer_from_tags(tags, lookup)
 
     def _latest_sender_by_conversation(self) -> dict[str, str]:
         """A Thread has no single sender, but the Emails screen shows one: the
@@ -132,7 +118,7 @@ class DayView:
 
     def list_email_items(self, day: str | None = None) -> list[dict]:
         range_start, range_end = self._day_bounds(day)
-        customer_lookup = self.customer_name_by_tag()
+        customer_of = self._customer_resolver()
         sender_lookup = self._latest_sender_by_conversation()
         items = []
         for entry in self._api.vault.index().values():
@@ -145,7 +131,7 @@ class DayView:
             items.append({
                 "subject": frontmatter.get("thread_name", ""),
                 "sender": sender_lookup.get(frontmatter.get("conversation_id"), ""),
-                "customer": customer_from_tags(entry["tags"], customer_lookup),
+                "customer": customer_of(entry["tags"]),
                 "received": received,
                 "stem": entry["stem"],
             })
@@ -154,7 +140,7 @@ class DayView:
 
     def list_calendar_items(self, day: str | None = None) -> list[dict]:
         range_start, range_end = self._day_bounds(day)
-        customer_lookup = self.customer_name_by_tag()
+        customer_of = self._customer_resolver()
         series_lookup = self._meeting_series_lookup()
         items = []
         for entry in self._api.vault.index().values():
@@ -167,9 +153,7 @@ class DayView:
             if not _within_window(start, range_start, range_end):
                 continue
             series = series_lookup.get(_series_folder_name_for(entry["path"])) or {}
-            customer = customer_from_tags(entry["tags"], customer_lookup) or customer_from_tags(
-                series.get("tags") or [], customer_lookup
-            )
+            customer = customer_of(entry["tags"]) or customer_of(series.get("tags") or [])
             items.append({
                 "subject": frontmatter.get("subject") or series.get("subject") or entry["stem"],
                 "start": start,
@@ -223,9 +207,3 @@ class DayView:
             "todo": {"count": len(self.list_todo_items())},
             "window": {"start": window_start, "end": window_end},
         }
-
-    # -- Cockpit ---------------------------------------------------------------------------
-
-    def customer_subject_enricher(self, subject_kind: str, frontmatter: dict, tags: list[str]) -> dict:
-        customer = customer_from_tags(tags, self.customer_name_by_tag())
-        return {"customer": customer} if customer else {}

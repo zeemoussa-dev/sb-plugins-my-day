@@ -11,7 +11,9 @@ a manual refresh of the capture pipelines behind them.
 | `tests/` | the plugin's own tests; run on publish, never packaged |
 
 The plugin talks to the framework only through the Plugin API: `app.plugin_api`
-in the backend and `src/pluginHost/` in the screens.
+in the backend and `src/pluginHost/` in the screens. Customers shown on emails
+and meetings come from the Entities plugin's `entities.customers` service; with
+Entities not installed, My Day shows no customers.
 
 ## Publish
 

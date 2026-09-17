@@ -73,14 +73,33 @@ class FakeHermes:
         return True
 
 
-class FakeApi:
+class FakeEntitiesCustomers:
+    """Stands in for the Entities plugin's `entities.customers` service."""
+
     def __init__(self):
+        self.lookups_built = 0
+
+    def name_by_tag(self):
+        self.lookups_built += 1
+        return {tag: entry["frontmatter"]["name"] for entry in INDEX.values()
+                if entry["frontmatter"].get("type") in ("Customer", "Partner") for tag in entry["tags"]}
+
+    def customer_from_tags(self, tags, lookup):
+        return next((lookup[tag] for tag in tags if tag.startswith("customer/") and tag in lookup), None)
+
+
+class FakeApi:
+    def __init__(self, entities_installed=True):
         self.plugin_id = "my-day"
         self.vault = FakeVault()
         self.pipelines = FakePipelines()
         self.hermes = FakeHermes()
         self.routers = []
         self.subject_enrichers = []
+        self.services = {"entities.customers": FakeEntitiesCustomers()} if entities_installed else {}
+
+    def get_service(self, name):
+        return self.services.get(name)
 
     def register_router(self, router):
         self.routers.append(router)
@@ -99,11 +118,11 @@ def view(api):
     return DayView(api, today=lambda: TODAY)
 
 
-def test_register_wires_a_router_and_the_customer_enricher(api):
+def test_register_wires_a_router_and_leaves_cockpit_customers_to_entities(api):
     backend.register(api)
 
     assert len(api.routers) == 1
-    assert len(api.subject_enrichers) == 1
+    assert api.subject_enrichers == []
 
 
 def test_emails_are_windowed_with_the_customer_and_latest_sender(view):
@@ -151,9 +170,20 @@ def test_summary_counts_and_always_the_full_window(view):
     }
 
 
-def test_the_customer_enricher_prefers_the_customer_over_a_partner(view):
-    assert view.customer_subject_enricher("email", {}, ["partner/g42", "customer/adnoc"]) == {"customer": "Adnoc"}
-    assert view.customer_subject_enricher("email", {}, ["partner/g42"]) == {}
+def test_customers_come_from_the_entities_service_one_lookup_per_listing(view, api):
+    view.list_email_items()
+
+    assert api.services["entities.customers"].lookups_built == 1
+
+
+def test_without_entities_installed_nothing_has_a_customer_and_nothing_fails():
+    view = DayView(FakeApi(entities_installed=False), today=lambda: TODAY)
+
+    [email] = view.list_email_items()
+    [meeting] = view.list_calendar_items()
+
+    assert email["customer"] is None and email["sender"] == "Alice"
+    assert meeting["customer"] is None and meeting["subject"] == "Weekly sync"
 
 
 def test_the_router_serves_the_screens_and_rejects_a_day_outside_the_window(view):
