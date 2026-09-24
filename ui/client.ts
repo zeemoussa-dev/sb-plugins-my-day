@@ -62,3 +62,17 @@ export interface MyDayRefreshOutcome {
 export function triggerMyDayRefresh(): Promise<MyDayRefreshOutcome[]> {
   return apiFetch<MyDayRefreshOutcome[]>(`${BASE}/refresh`, { method: 'POST' });
 }
+
+/** One real email inside a captured Thread -- its own note under the Thread's
+ * `messages/` folder. */
+export interface ThreadEmail {
+  stem: string;
+  subject: string;
+  sender: string;
+  sender_email: string;
+  received: string;
+}
+
+export function fetchThreadEmails(subjectNoteStem: string): Promise<ThreadEmail[]> {
+  return apiFetch<ThreadEmail[]>(`${BASE}/threads/${encodeURIComponent(subjectNoteStem)}/emails`);
+}

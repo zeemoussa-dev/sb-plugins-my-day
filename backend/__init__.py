@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from .day_view import DayView
 from .routes import build_router
+from .thread_emails import ThreadEmails
 
 
 def register(api) -> None:
-    api.register_router(build_router(DayView(api)))
+    api.register_router(build_router(DayView(api), ThreadEmails(api)))

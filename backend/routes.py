@@ -4,9 +4,10 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from .day_view import DayOutsideWindowError, DayView
+from .thread_emails import ThreadEmails
 
 
-def build_router(view: DayView) -> APIRouter:
+def build_router(view: DayView, thread_emails: ThreadEmails) -> APIRouter:
     router = APIRouter()
 
     def validated_day(day: str | None) -> str | None:
@@ -30,6 +31,12 @@ def build_router(view: DayView) -> APIRouter:
     @router.get("/todo")
     def get_todo() -> list[dict]:
         return view.list_todo_items()
+
+    # The emails one Thread is made of, for this plugin's own Cockpit tab. The
+    # Cockpit is a generic component; a Thread's shape is My Day's knowledge.
+    @router.get("/threads/{subject_note_stem}/emails")
+    def get_thread_emails(subject_note_stem: str) -> list[dict]:
+        return thread_emails.list_for(subject_note_stem)
 
     @router.post("/refresh")
     def post_refresh() -> list[dict]:

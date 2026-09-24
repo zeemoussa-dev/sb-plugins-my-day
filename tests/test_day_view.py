@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 import backend
 from backend.day_view import DayView
 from backend.routes import build_router
+from backend.thread_emails import ThreadEmails
 
 TODAY = date(2026, 9, 14)
 
@@ -186,11 +187,14 @@ def test_without_entities_installed_nothing_has_a_customer_and_nothing_fails():
     assert meeting["customer"] is None and meeting["subject"] == "Weekly sync"
 
 
-def test_the_router_serves_the_screens_and_rejects_a_day_outside_the_window(view):
+def test_the_router_serves_the_screens_and_rejects_a_day_outside_the_window(view, api):
     app = FastAPI()
-    app.include_router(build_router(view), prefix="/plugins/my-day")
+    app.include_router(build_router(view, ThreadEmails(api)), prefix="/plugins/my-day")
     client = TestClient(app)
 
     assert client.get("/plugins/my-day/emails").status_code == 200
     assert client.get("/plugins/my-day/summary", params={"day": "2026-09-01"}).status_code == 400
     assert client.post("/plugins/my-day/refresh").status_code == 200
+    # The Cockpit tab's own endpoint: a subject with no messages/ folder is an
+    # empty list, not an error.
+    assert client.get("/plugins/my-day/threads/nothing-here/emails").json() == []
