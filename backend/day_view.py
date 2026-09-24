@@ -2,9 +2,14 @@
 
 Ported from the framework's `business/my_day.py` (Second Brain `REQ-SB-91`
 Phase 5) with its behaviour unchanged. The five framework capabilities it used
-directly are now the Plugin API v1 calls: `api.vault.index()`,
+directly are now Plugin API calls: `api.vault.entries()`,
 `api.vault.notes_in_kind()`, `api.vault.read_note()`, `api.pipelines.get()` and
-`api.hermes.run_cron_job()`. Customers come from the Entities plugin's
+`api.hermes.run_cron_job()`.
+
+Listing goes through `entries()`, not `index()` (framework API v5, `BUG-076`):
+`index()` holds one note per name, and a meeting whose invitation email was
+captured under the same name simply was not in it -- My Day showed four of the
+day's five meetings. Customers come from the Entities plugin's
 `entities.customers` service (1.3.0).
 """
 from __future__ import annotations
@@ -88,7 +93,7 @@ class DayView:
         """A Thread has no single sender, but the Emails screen shows one: the
         sender of the conversation's most recent RawMessage."""
         latest: dict[str, tuple[str, str]] = {}
-        for entry in self._api.vault.index().values():
+        for entry in self._api.vault.entries():
             frontmatter = entry["frontmatter"]
             if frontmatter.get("type") != "RawMessage":
                 continue
@@ -107,7 +112,7 @@ class DayView:
         is the occurrence's grandparent folder on disk (the series folder name is
         a truncated prefix of `calendar_series_id`, so the ids do not match)."""
         lookup: dict[str, dict] = {}
-        for entry in self._api.vault.index().values():
+        for entry in self._api.vault.entries():
             frontmatter = entry["frontmatter"]
             if frontmatter.get("type") != "Meeting" or frontmatter.get("start"):
                 continue
@@ -121,7 +126,7 @@ class DayView:
         customer_of = self._customer_resolver()
         sender_lookup = self._latest_sender_by_conversation()
         items = []
-        for entry in self._api.vault.index().values():
+        for entry in self._api.vault.entries():
             frontmatter = entry["frontmatter"]
             if frontmatter.get("type") != "Thread":
                 continue
@@ -143,7 +148,7 @@ class DayView:
         customer_of = self._customer_resolver()
         series_lookup = self._meeting_series_lookup()
         items = []
-        for entry in self._api.vault.index().values():
+        for entry in self._api.vault.entries():
             frontmatter = entry["frontmatter"]
             if frontmatter.get("type") != "Meeting":
                 continue

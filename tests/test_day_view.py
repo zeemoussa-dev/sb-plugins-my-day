@@ -39,6 +39,19 @@ INDEX = {
                           "frontmatter": {"type": "Meeting", "start": "2026-09-15T10:00"}, "tags": []},
 }
 
+# A meeting whose own invitation email was captured under the same name. The
+# framework's by-stem index can only hold one of them, so this one is reachable
+# only through `entries()` (framework `BUG-076`).
+HIDDEN_MEETING = {
+    "stem": "2026-09-15 Masdar-Core42", "path": "Work/Meetings/2026-09-15 Masdar-Core42/2026-09-15 Masdar-Core42.md",
+    "frontmatter": {"type": "Meeting", "subject": "Masdar/Core42", "start": "2026-09-15T16:30"}, "tags": [],
+}
+SHADOWING_MESSAGE = {
+    "stem": "2026-09-15 Masdar-Core42", "path": "Work/Threads/Masdar/messages/2026-09-15 Masdar-Core42.md",
+    "frontmatter": {"type": "RawMessage", "conversation_id": "c9", "received": "2026-09-15T08:00", "sender": "Tim"},
+    "tags": [],
+}
+
 TASKS = {
     "Work/Tasks/a.md": {"subject": "Send proposal", "due": "2026-09-20"},
     "Work/Tasks/b.md": {"subject": "Book travel", "due": None},
@@ -49,7 +62,13 @@ TASKS = {
 
 class FakeVault:
     def index(self):
-        return dict(INDEX)
+        """One note per name, as the framework's own index is -- the message wins
+        this name, which is exactly why listing must not use it."""
+        return dict(INDEX, **{SHADOWING_MESSAGE["stem"]: SHADOWING_MESSAGE})
+
+    def entries(self):
+        """Every note, collisions included (framework API v5)."""
+        return [*INDEX.values(), SHADOWING_MESSAGE, HIDDEN_MEETING]
 
     def notes_in_kind(self, kind):
         return list(TASKS) if kind == "Tasks" else []
@@ -140,8 +159,16 @@ def test_emails_for_one_day(view):
     assert view.list_email_items("2026-09-15") == []
 
 
+def test_a_meeting_hidden_behind_a_same_named_message_is_still_listed(view):
+    """Framework BUG-076: My Day showed four of the day's five meetings because the
+    fifth shared a name with its own invitation email."""
+    subjects = [item["subject"] for item in view.list_calendar_items()]
+
+    assert "Masdar/Core42" in subjects
+
+
 def test_a_meeting_occurrence_inherits_its_series_subject_and_customer(view):
-    [item] = view.list_calendar_items()
+    [item] = [i for i in view.list_calendar_items() if i["stem"] == "2026-09-15 Weekly"]
 
     assert item == {"subject": "Weekly sync", "start": "2026-09-15T10:00", "customer": "Adnoc", "stem": "2026-09-15 Weekly"}
 
@@ -165,7 +192,9 @@ def test_refresh_triggers_configured_pipelines_and_reports_the_rest(view, api):
 def test_summary_counts_and_always_the_full_window(view):
     assert view.summary("2026-09-15") == {
         "emails": {"count": 0},
-        "calendar": {"count": 1},
+        # The Weekly occurrence and the meeting that used to be hidden behind its
+        # own invitation email (framework BUG-076).
+        "calendar": {"count": 2},
         "todo": {"count": 3},
         "window": {"start": "2026-09-11", "end": "2026-09-17"},
     }
@@ -181,7 +210,7 @@ def test_without_entities_installed_nothing_has_a_customer_and_nothing_fails():
     view = DayView(FakeApi(entities_installed=False), today=lambda: TODAY)
 
     [email] = view.list_email_items()
-    [meeting] = view.list_calendar_items()
+    [meeting] = [i for i in view.list_calendar_items() if i["stem"] == "2026-09-15 Weekly"]
 
     assert email["customer"] is None and email["sender"] == "Alice"
     assert meeting["customer"] is None and meeting["subject"] == "Weekly sync"

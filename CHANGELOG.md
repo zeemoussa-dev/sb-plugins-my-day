@@ -5,6 +5,12 @@ repository and is never copied in here.
 
 ## [Unreleased]
 
+- fix: a meeting hidden behind a same-named note is listed again (1.5.0, framework API v5, framework `BUG-076`).
+  The framework's by-name index keeps one note per file name, and a meeting captured alongside its own invitation
+  email shares that name -- so My Day listed four of the day's five meetings and counted four in the summary.
+  The day view now sweeps `api.vault.entries()`, which is every note; `index()` stays for looking one up by name.
+  Needs framework API v5, so this version will not load on an older host.
+
 - feat: a Thread's own emails, as a tab inside the Cockpit (1.4.0, framework API v3, framework `ADR-025`). A captured Thread keeps one note per real email under its `messages/` folder; the Cockpit showed the Thread note, its people and its attachments, and never the emails. The framework briefly carried this itself, which made it know what a Thread is made of -- the operator's correction (2026-09-24): the Cockpit is a generic component for chatting with agents about a subject, and email is this plugin's domain. So `backend/thread_emails.py` reads the folder through the Plugin API, `GET /plugins/my-day/threads/{stem}/emails` serves it, and `ui/ThreadEmailsTab.tsx` is contributed through the host's new `cockpitTabs` contract. Needs framework API v3, so this version will not load on an older host.
 
 - docs: `CLAUDE.md` and `MEMORY.md` for this repository (framework `ADR-023`): a session opened here works on
