@@ -5,6 +5,18 @@ repository and is never copied in here.
 
 ## [Unreleased]
 
+- fix: the reader shows the thread's subject line, not its conversation id (1.6.1). A Thread carries its subject
+  as `thread_name`; reading `subject`/`title` fell through to the stem, which on the real install is a bare GUID.
+  The newest thread also opens by itself now, and a file whose note is titled after the file no longer repeats it.
+
+- feat: the Emails tab reads a thread, instead of indexing it (1.6.0, framework API v6). A list beside a reader:
+  the thread's `Summary`, the emails it is made of -- each one opening in place to read the captured text -- and
+  the files that came attached, which open as the real file. Reading an email no longer means leaving the tab
+  (operator, 2026-09-25: "the emails tab should include the related documents ... as well as the emails it self
+  the thread summary. We need to make the email more useful"). The summary and the attachments come from the host
+  (`vault.read_section`, `vault.attachments`) rather than being re-derived here, and bodies render through
+  `NoteText`, so they read as the app renders vault text. Needs framework API v6.
+
 - fix: a meeting hidden behind a same-named note is listed again (1.5.0, framework API v5, framework `BUG-076`).
   The framework's by-name index keeps one note per file name, and a meeting captured alongside its own invitation
   email shares that name -- so My Day listed four of the day's five meetings and counted four in the summary.

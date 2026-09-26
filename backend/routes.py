@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from .day_view import DayOutsideWindowError, DayView
-from .thread_emails import ThreadEmails
+from .thread_emails import MessageNotFoundError, SubjectNotFoundError, ThreadEmails
 
 
 def build_router(view: DayView, thread_emails: ThreadEmails) -> APIRouter:
@@ -37,6 +37,21 @@ def build_router(view: DayView, thread_emails: ThreadEmails) -> APIRouter:
     @router.get("/threads/{subject_note_stem}/emails")
     def get_thread_emails(subject_note_stem: str) -> list[dict]:
         return thread_emails.list_for(subject_note_stem)
+
+    # What the Emails tab reads: the thread's summary, its emails and its files.
+    @router.get("/threads/{subject_note_stem}")
+    def get_thread(subject_note_stem: str) -> dict:
+        try:
+            return thread_emails.detail_for(subject_note_stem)
+        except SubjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=f"No indexed note '{subject_note_stem}'") from exc
+
+    @router.get("/threads/{subject_note_stem}/emails/{message_stem}")
+    def get_thread_email(subject_note_stem: str, message_stem: str) -> dict:
+        try:
+            return thread_emails.body_for(subject_note_stem, message_stem)
+        except (SubjectNotFoundError, MessageNotFoundError) as exc:
+            raise HTTPException(status_code=404, detail=f"No email '{message_stem}' in this thread") from exc
 
     @router.post("/refresh")
     def post_refresh() -> list[dict]:

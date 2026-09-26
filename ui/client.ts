@@ -1,4 +1,4 @@
-import { apiFetch } from '../../pluginHost/api';
+import { apiFetch, apiUrl } from '../../pluginHost/api';
 
 // The host mounts this plugin's backend under /plugins/<plugin-id>/.
 const BASE = '/plugins/my-day';
@@ -75,4 +75,46 @@ export interface ThreadEmail {
 
 export function fetchThreadEmails(subjectNoteStem: string): Promise<ThreadEmail[]> {
   return apiFetch<ThreadEmail[]>(`${BASE}/threads/${encodeURIComponent(subjectNoteStem)}/emails`);
+}
+
+/** A file captured with this Thread, under the subject's own `Files/` folder.
+ * `filename` is the real file beside the attachment's note, or null when the
+ * note was written without one. */
+export interface ThreadAttachment {
+  title: string;
+  filename: string | null;
+  stem: string;
+}
+
+/** What the Emails tab reads about one thread: what it is about, the emails it
+ * is made of, and what came attached. */
+export interface ThreadDetail {
+  stem: string;
+  subject: string;
+  summary: string | null;
+  emails: ThreadEmail[];
+  attachments: ThreadAttachment[];
+}
+
+export function fetchThreadDetail(subjectNoteStem: string): Promise<ThreadDetail> {
+  return apiFetch<ThreadDetail>(`${BASE}/threads/${encodeURIComponent(subjectNoteStem)}`);
+}
+
+export type ThreadEmailBody = ThreadEmail & { body: string };
+
+/** One email's captured text. Fetched when it is opened, not with the thread:
+ * a long thread would otherwise carry every body it never shows. */
+export function fetchThreadEmail(subjectNoteStem: string, messageStem: string): Promise<ThreadEmailBody> {
+  return apiFetch<ThreadEmailBody>(
+    `${BASE}/threads/${encodeURIComponent(subjectNoteStem)}/emails/${encodeURIComponent(messageStem)}`,
+  );
+}
+
+/** The real attachment file, as a URL the browser opens or downloads for itself
+ * -- the framework serves a file sitting beside an indexed note (host `apiUrl`,
+ * contract v6). */
+export function attachmentUrl(noteStem: string, filename: string): string {
+  return apiUrl(
+    `/vault-search/notes/${encodeURIComponent(noteStem)}/assets/${encodeURIComponent(filename)}`,
+  );
 }
