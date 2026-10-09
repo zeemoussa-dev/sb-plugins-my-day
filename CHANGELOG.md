@@ -5,6 +5,10 @@ repository and is never copied in here.
 
 ## [Unreleased]
 
+- chore: built against Plugin API v7 (1.6.2). `vault.read_note()` now hands back a body a renderer can show, so
+  an email whose body is HTML reads as an email in the Cockpit's Emails tab instead of as `<html><head>`
+  (framework `BUG-081`). No change in this repository beyond the manifest.
+
 - fix: the reader shows the thread's subject line, not its conversation id (1.6.1). A Thread carries its subject
   as `thread_name`; reading `subject`/`title` fell through to the stem, which on the real install is a bare GUID.
   The newest thread also opens by itself now, and a file whose note is titled after the file no longer repeats it.
