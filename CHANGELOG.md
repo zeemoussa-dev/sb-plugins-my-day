@@ -5,6 +5,8 @@ repository and is never copied in here.
 
 ## [Unreleased]
 
+- chore: built against Plugin API v8 (1.6.3). The host now provides a charting library (`echarts` and `echarts-for-react`, including their subpaths, framework `ADR-039`), which moved the API to 8; the gate is exact-match, so every installed plugin is republished when it moves. No behaviour change here -- this plugin draws no charts yet, and the capability is available if a screen ever wants one.
+
 - chore: built against Plugin API v7 (1.6.2). `vault.read_note()` now hands back a body a renderer can show, so
   an email whose body is HTML reads as an email in the Cockpit's Emails tab instead of as `<html><head>`
   (framework `BUG-081`). No change in this repository beyond the manifest.
