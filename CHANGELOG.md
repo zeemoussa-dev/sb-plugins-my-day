@@ -5,6 +5,8 @@ repository and is never copied in here.
 
 ## [Unreleased]
 
+- chore: built against Plugin API v9 (1.6.4). The host now also provides `openpyxl` to plugin backends (framework `ADR-040`), which moved the API to 9. No behaviour change here; the republish is what keeps the plugin loading, since the gate is exact-match.
+
 - chore: built against Plugin API v8 (1.6.3). The host now provides a charting library (`echarts` and `echarts-for-react`, including their subpaths, framework `ADR-039`), which moved the API to 8; the gate is exact-match, so every installed plugin is republished when it moves. No behaviour change here -- this plugin draws no charts yet, and the capability is available if a screen ever wants one.
 
 - chore: built against Plugin API v7 (1.6.2). `vault.read_note()` now hands back a body a renderer can show, so
