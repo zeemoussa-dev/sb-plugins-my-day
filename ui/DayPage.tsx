@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { useUrlState } from '../../pluginHost/state';
 import { fetchMyDaySummary, triggerMyDayRefresh, type MyDaySummary } from './client';
 
 const SECTIONS = [
@@ -34,7 +35,9 @@ function formatWindowRange(start: string, end: string): string {
 }
 
 export function DayPage() {
-  const [selectedDay, setSelectedDay] = useState<string>(todayIso());
+  // The day being looked at lives in the URL, so a refresh does not jump
+  // back to today and one day can be linked to (framework ADR-041).
+  const [selectedDay, setSelectedDay] = useUrlState('day', todayIso());
   const [summary, setSummary] = useState<MyDaySummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
